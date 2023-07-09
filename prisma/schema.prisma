@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Added {
+  added_id Int      @id @default(autoincrement())
+  name     String?  @unique(map: "sqlite_autoindex_Added_1")
+  System   System[]
+}
+
+model Category {
+  category_id Int        @id @unique(map: "sqlite_autoindex_Category_1") @default(autoincrement())
+  name        String?
+  Item        Item[]
+  RareItem    RareItem[]
+}
+
+model FDevOutfitting {
+  id          Int     @unique(map: "sqlite_autoindex_FDevOutfitting_1")
+  symbol      String?
+  category    String?
+  name        String?
+  mount       String?
+  guidance    String?
+  ship        String?
+  class       String
+  rating      String
+  entitlement String?
+}
+
+model FDevShipyard {
+  id     Int     @unique(map: "sqlite_autoindex_FDevShipyard_1")
+  symbol String?
+  name   String?
+}
+
+model Item {
+  item_id     Int           @id @unique(map: "sqlite_autoindex_Item_1") @default(autoincrement())
+  name        String?
+  category_id Int
+  ui_order    Int           @default(0)
+  avg_price   Int?
+  fdev_id     Int?          @unique(map: "sqlite_autoindex_Item_2")
+  Category    Category      @relation(fields: [category_id], references: [category_id], onDelete: Cascade)
+  StationItem StationItem[]
+
+  @@index([fdev_id], map: "idx_item_by_fdev_id")
+}
+
+model RareItem {
+  rare_id        Int                    @id @default(autoincrement())
+  station_id     Int
+  category_id    Int
+  name           String?                @unique(map: "sqlite_autoindex_RareItem_1")
+  cost           Int?
+  max_allocation Int?
+  illegal        String
+  suppressed     String
+  Category       Category               @relation(fields: [category_id], references: [category_id], onDelete: Cascade)
+  Station        Station                @relation(fields: [station_id], references: [station_id], onDelete: Cascade)
+}
+
+model Ship {
+  ship_id    Int          @id @unique(map: "sqlite_autoindex_Ship_1") @default(autoincrement())
+  name       String?
+  cost       Int
+  fdev_id    Int?
+  ShipVendor ShipVendor[]
+}
+
+model ShipVendor {
+  ship_id    Int
+  station_id Int
+  modified   DateTime @default(now())
+  Station    Station  @relation(fields: [station_id], references: [station_id], onDelete: Cascade)
+  Ship       Ship     @relation(fields: [ship_id], references: [ship_id], onDelete: Cascade)
+
+  @@id([ship_id, station_id])
+}
+
+model Station {
+  station_id    Int                    @id @unique(map: "sqlite_autoindex_Station_1") @default(autoincrement())
+  name          String?
+  system_id     Int
+  ls_from_star  Int                    @default(0)
+  blackmarket   String
+  max_pad_size  String
+  market        String
+  shipyard      String
+  modified      DateTime               @default(now())
+  outfitting    String
+  rearm         String
+  refuel        String
+  repair        String
+  planetary     String
+  type_id       Int                    @default(0)
+  RareItem      RareItem[]
+  ShipVendor    ShipVendor[]
+  System        System                 @relation(fields: [system_id], references: [system_id], onDelete: Cascade)
+  StationItem   StationItem[]
+  UpgradeVendor UpgradeVendor[]
+
+  @@index([name], map: "idx_station_by_name")
+  @@index([system_id, station_id], map: "idx_station_by_system")
+}
+
+model StationItem {
+  station_id   Int
+  item_id      Int
+  demand_price Int
+  demand_units Int
+  demand_level Int
+  supply_price Int
+  supply_units Int
+  supply_level Int
+  modified     DateTime @default(now())
+  from_live    Int      @default(0)
+  Item         Item     @relation(fields: [item_id], references: [item_id], onDelete: Cascade)
+  Station      Station  @relation(fields: [station_id], references: [station_id], onDelete: Cascade)
+
+  @@id([station_id, item_id])
+  @@index([modified, station_id, item_id], map: "si_mod_stn_itm")
+}
+
+model System {
+  system_id Int       @id @unique(map: "sqlite_autoindex_System_1") @default(autoincrement())
+  name      String?
+  pos_x     Float
+  pos_y     Float
+  pos_z     Float
+  added_id  Int?
+  modified  DateTime  @default(now())
+  Station   Station[]
+  Added     Added?    @relation(fields: [added_id], references: [added_id], onDelete: Cascade)
+
+  @@index([pos_x, pos_y, pos_z, system_id], map: "idx_system_by_pos")
+}
+
+model Upgrade {
+  upgrade_id    Int                   @id @unique(map: "sqlite_autoindex_Upgrade_1") @default(autoincrement())
+  name          String?
+  weight        Int
+  cost          Int
+  UpgradeVendor UpgradeVendor[]
+}
+
+model UpgradeVendor {
+  upgrade_id Int
+  station_id Int
+  cost       Int?
+  modified   DateTime
+  Station    Station  @relation(fields: [station_id], references: [station_id], onDelete: Cascade)
+  Upgrade    Upgrade  @relation(fields: [upgrade_id], references: [upgrade_id], onDelete: Cascade)
+
+  @@id([upgrade_id, station_id])
+  @@index([station_id], map: "idx_vendor_by_station_id")
+}
